@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรายงานการรักษาความปลอดภัยผ่านกล้องวงจรปิด - รพ.สต.คำครั่ง</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        purple: {
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                        }
+                    },
+                    fontFamily: {
+                        'kanit': ['Kanit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts - Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+        }
+
+        .gradient-purple-gold {
+            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #fbbf24 100%);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            transform: translateY(-2px);
+        }
+
+        .toggle-section {
+            display: none;
+        }
+
+        .toggle-section.active {
+            display: block;
+        }
+
+        .image-preview {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .status-badge-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge-verified {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="gradient-purple-gold text-white py-6 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="shield-check" class="w-10 h-10"></i>
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold">ระบบรายงานการรักษาความปลอดภัยผ่านกล้องวงจรปิด</h1>
+                        <p class="text-sm md:text-base opacity-90">โรงพยาบาลส่งเสริมสุขภาพตำบลคำครั่ง</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="toggleToReport" class="px-6 py-2 bg-white text-purple-900 rounded-lg font-semibold hover:bg-gold-400 transition">
+                        <i data-lucide="file-text" class="w-4 h-4 inline"></i> โหมดผู้รายงาน
+                    </button>
+                    <button id="toggleToAdmin" class="px-6 py-2 bg-white/20 text-white rounded-lg font-semibold hover:bg-white hover:text-purple-900 transition">
+                        <i data-lucide="lock" class="w-4 h-4 inline"></i> โหมดผู้ตรวจการ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container mx-auto px-4 py-8">
+
+        <!-- ส่วนที่ 1: ผู้รายงานเหตุการณ์ -->
+        <section id="reportSection" class="toggle-section active">
+            <div class="max-w-4xl mx-auto">
+
+                <!-- ฟอร์มบันทึกเหตุการณ์ -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-8 border-t-4 border-gold-500 card-hover">
+                    <div class="flex items-center gap-3 mb-6">
+                        <i data-lucide="clipboard-pen" class="w-8 h-8 text-purple-800"></i>
+                        <h2 class="text-2xl md:text-3xl font-bold text-purple-900">บันทึกเหตุการณ์ความปลอดภัย</h2>
+                    </div>
+
+                    <form id="reportForm" class="space-y-4">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">ชื่อ-นามสกุลผู้รายงาน <span class="text-red-500">*</span></label>
+                                <input type="text" id="reporterName" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">ตำแหน่ง/หน้าที่ <span class="text-red-500">*</span></label>
+                                <input type="text" id="reporterPosition" required placeholder="เช่น ยาม, ครูเวรกลางคืน" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">วันที่ <span class="text-red-500">*</span></label>
+                                <input type="date" id="reportDate" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">เวลา <span class="text-red-500">*</span></label>
+                                <input type="time" id="reportTime" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">พื้นที่เกิดเหตุ <span class="text-red-500">*</span></label>
+                            <select id="incidentArea" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                                <option value="">-- เลือกพื้นที่ --</option>
+                                <option value="ในอาคาร รพ.สต.">ในอาคาร รพ.สต.</option>
+                                <option value="ห้องประชุม">ห้องประชุม</option>
+                                <option value="บ้านพัก">บ้านพัก</option>
+                                <option value="หน้าเสาธง">หน้าเสาธง</option>
+                                <option value="อาคารห้องพัฒนาการ">อาคารห้องพัฒนาการ</option>
+                                <option value="ลานจอดรถ">ลานจอดรถ</option>
+                                <option value="รอบอาคาร">รอบอาคาร</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">รายละเอียดเหตุการณ์ <span class="text-red-500">*</span></label>
+                            <textarea id="incidentDetail" required rows="4" placeholder="โปรดระบุรายละเอียดเหตุการณ์..." class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i data-lucide="image" class="w-4 h-4 inline"></i>
+                                อัปโหลดรูปภาพหลักฐาน (สูงสุด 5 รูป)
+                            </label>
+                            <input type="file" id="incidentImages" accept="image/*" multiple class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            <div id="imagePreview" class="mt-3 flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div class="pt-4">
+                            <button type="submit" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">
+                                <i data-lucide="save" class="w-5 h-5 inline"></i>
+                                บันทึกเหตุการณ์
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- รายการเหตุการณ์ที่บันทึก -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border-t-4 border-purple-800">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="list-checks" class="w-8 h-8 text-purple-800"></i>
+                            <h2 class="text-2xl md:text-3xl font-bold text-purple-900">รายการเหตุการณ์ที่บันทึก</h2>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button id="filterAll" class="px-4 py-2 bg-purple-800 text-white rounded-lg text-sm font-semibold hover:bg-gold-500 transition">ทั้งหมด</button>
+                            <button id="filterPending" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gold-500 hover:text-white transition">ยังไม่ตรวจสอบ</button>
+                            <button id="filterVerified" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gold-500 hover:text-white transition">ตรวจสอบแล้ว</button>
+                        </div>
+                    </div>
+                    <div id="reportList" class="space-y-4">
+                        <!-- รายการจะแสดงที่นี่ -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 2: ผู้ตรวจการ (Admin) -->
+        <section id="adminSection" class="toggle-section">
+            <div class="max-w-6xl mx-auto">
+
+                <!-- Login Form -->
+                <div id="loginForm" class="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 border-t-4 border-gold-500">
+                    <div class="flex items-center justify-center gap-3 mb-6">
+                        <i data-lucide="lock-keyhole" class="w-10 h-10 text-purple-800"></i>
+                        <h2 class="text-3xl font-bold text-purple-900">เข้าสู่ระบบผู้ตรวจการ</h2>
+                    </div>
+
+                    <form id="adminLoginForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">ชื่อผู้ใช้</label>
+                            <div class="relative">
+                                <i data-lucide="user" class="w-5 h-5 absolute left-3 top-3 text-gray-400"></i>
+                                <input type="text" id="adminUsername" required class="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">รหัสผ่าน</label>
+                            <div class="relative">
+                                <i data-lucide="key" class="w-5 h-5 absolute left-3 top-3 text-gray-400"></i>
+                                <input type="password" id="adminPassword" required class="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">
+                            <i data-lucide="log-in" class="w-5 h-5 inline"></i>
+                            เข้าสู่ระบบ
+                        </button>
+                    </form>
+
+                    <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p class="text-sm text-yellow-800 text-center">
+                            <i data-lucide="info" class="w-4 h-4 inline"></i>
+                            ข้อมูลเริ่มต้น: admin / admin
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Admin Dashboard -->
+                <div id="adminDashboard" style="display: none;">
+                    <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border-t-4 border-purple-800">
+                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="shield-alert" class="w-8 h-8 text-purple-800"></i>
+                                <h2 class="text-2xl md:text-3xl font-bold text-purple-900">ตรวจสอบรายงานความปลอดภัย</h2>
+                            </div>
+                            <div class="flex gap-2 flex-wrap">
+                                <button id="downloadJSON" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition">
+                                    <i data-lucide="download" class="w-4 h-4 inline"></i> ดาวน์โหลด JSON
+                                </button>
+                                <button id="printReport" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
+                                    <i data-lucide="printer" class="w-4 h-4 inline"></i> พิมพ์รายงาน PDF
+                                </button>
+                                <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition">
+                                    <i data-lucide="log-out" class="w-4 h-4 inline"></i> ออกจากระบบ
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ตารางรายการ (Desktop) -->
+                        <div class="hidden md:block overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-purple-900 text-white">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">วันที่/เวลา</th>
+                                        <th class="px-4 py-3 text-left">ผู้รายงาน</th>
+                                        <th class="px-4 py-3 text-left">พื้นที่</th>
+                                        <th class="px-4 py-3 text-left">รายละเอียด</th>
+                                        <th class="px-4 py-3 text-left">รูปภาพ</th>
+                                        <th class="px-4 py-3 text-left">สถานะ</th>
+                                        <th class="px-4 py-3 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTableBody">
+                                    <!-- รายการจะแสดงที่นี่ -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Card Layout (Mobile) -->
+                        <div id="adminCardList" class="md:hidden space-y-4">
+                            <!-- รายการจะแสดงที่นี่ -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal สำหรับดูรูปภาพขยาย -->
+    <div id="imageModal" class="modal">
+        <span id="closeModal" class="absolute top-4 right-8 text-white text-5xl font-bold cursor-pointer hover:text-gold-400">&times;</span>
+        <img id="modalImage" class="modal-content rounded-lg shadow-2xl">
+    </div>
+
+    <!-- Modal สำหรับตรวจสอบรายงาน -->
+    <div id="verifyModal" class="modal">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-purple-900">
+                    <i data-lucide="clipboard-check" class="w-6 h-6 inline"></i>
+                    ตรวจสอบรายงาน
+                </h3>
+                <button id="closeVerifyModal" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div id="verifyContent" class="space-y-4 mb-6">
+                <!-- เนื้อหารายละเอียดจะแสดงที่นี่ -->
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">หมายเหตุผู้ตรวจการ</label>
+                    <textarea id="adminNote" rows="3" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:outline-none" placeholder="ระบุหมายเหตุ (ถ้ามี)"></textarea>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="verifyCheckbox" class="w-5 h-5 text-purple-800 rounded focus:ring-purple-800">
+                    <label for="verifyCheckbox" class="text-sm font-semibold text-gray-700">
+                        <i data-lucide="check-circle" class="w-4 h-4 inline text-green-600"></i>
+                        ตรวจสอบแล้ว
+                    </label>
+                </div>
+
+                <button id="saveVerification" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">
+                    <i data-lucide="save" class="w-5 h-5 inline"></i>
+                    บันทึกผลการตรวจสอบ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-purple-900 text-white py-6 mt-16">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm md:text-base">
+                © 2025 โรงพยาบาลส่งเสริมสุขภาพตำบลคำครั่ง | ออกแบบโดย ทีม IT รพ.สต.คำครั่ง
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        $(document).ready(function() {
+            // Initialize Lucide Icons
+            lucide.createIcons();
+
+            // ตั้งค่าเวลาปัจจุบันให้กับฟอร์ม
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.toTimeString().slice(0, 5);
+            $('#reportDate').val(dateStr);
+            $('#reportTime').val(timeStr);
+
+            // ตัวแปรสำหรับเก็บข้อมูล
+            let reports = JSON.parse(localStorage.getItem('securityReports')) || [];
+            let currentReportId = null;
+            let isAdminLoggedIn = false;
+
+            // Toggle ระหว่างโหมด
+            $('#toggleToReport').click(function() {
+                $('#reportSection').addClass('active');
+                $('#adminSection').removeClass('active');
+                $(this).removeClass('bg-white/20 text-white').addClass('bg-white text-purple-900');
+                $('#toggleToAdmin').removeClass('bg-white text-purple-900').addClass('bg-white/20 text-white');
+                loadReportList();
+            });
+
+            $('#toggleToAdmin').click(function() {
+                $('#adminSection').addClass('active');
+                $('#reportSection').removeClass('active');
+                $(this).removeClass('bg-white/20 text-white').addClass('bg-white text-purple-900');
+                $('#toggleToReport').removeClass('bg-white text-purple-900').addClass('bg-white/20 text-white');
+            });
+
+            // Preview รูปภาพก่อนอัปโหลด
+            $('#incidentImages').change(function(e) {
+                const files = e.target.files;
+                $('#imagePreview').html('');
+
+                if (files.length > 5) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'เกินจำนวนที่กำหนด',
+                        text: 'สามารถอัปโหลดได้สูงสุด 5 รูปเท่านั้น',
+                        confirmButtonColor: '#5b21b6'
+                    });
+                    $(this).val('');
+                    return;
+                }
+
+                Array.from(files).forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#imagePreview').append(`
+                            <img src="${e.target.result}" class="image-preview rounded-lg border-2 border-gray-300" alt="Preview ${index + 1}">
+                        `);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            // บันทึกเหตุการณ์
+            $('#reportForm').submit(function(e) {
+                e.preventDefault();
+
+                const files = $('#incidentImages')[0].files;
+                const imagePromises = [];
+
+                Array.from(files).forEach(file => {
+                    imagePromises.push(new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(file);
+                    }));
+                });
+
+                Promise.all(imagePromises).then(images => {
+                    const report = {
+                        id: Date.now(),
+                        reporterName: $('#reporterName').val(),
+                        reporterPosition: $('#reporterPosition').val(),
+                        date: $('#reportDate').val(),
+                        time: $('#reportTime').val(),
+                        area: $('#incidentArea').val(),
+                        detail: $('#incidentDetail').val(),
+                        images: images,
+                        status: 'pending',
+                        adminNote: '',
+                        createdAt: new Date().toISOString()
+                    };
+
+                    reports.push(report);
+                    localStorage.setItem('securityReports', JSON.stringify(reports));
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกเหตุการณ์เรียบร้อยแล้ว',
+                        text: 'ข้อมูลของคุณได้รับการบันทึกเรียบร้อยแล้ว',
+                        confirmButtonColor: '#5b21b6',
+                        confirmButtonText: 'ตรวจสอบ'
+                    });
+
+                    // ล้างฟอร์ม
+                    $('#reportForm')[0].reset();
+                    $('#imagePreview').html('');
+
+                    // ตั้งค่าวันที่เวลาใหม่
+                    const now = new Date();
+                    $('#reportDate').val(now.toISOString().split('T')[0]);
+                    $('#reportTime').val(now.toTimeString().slice(0, 5));
+
+                    // โหลดรายการใหม่
+                    loadReportList();
+                });
+            });
+
+            // โหลดรายการเหตุการณ์
+            function loadReportList(filter = 'all') {
+                let filteredReports = reports;
+
+                if (filter === 'pending') {
+                    filteredReports = reports.filter(r => r.status === 'pending');
+                } else if (filter === 'verified') {
+                    filteredReports = reports.filter(r => r.status === 'verified');
+                }
+
+                $('#reportList').html('');
+
+                if (filteredReports.length === 0) {
+                    $('#reportList').html(`
+                        <div class="text-center py-8 text-gray-500">
+                            <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-3 opacity-50"></i>
+                            <p>ยังไม่มีรายการเหตุการณ์</p>
+                        </div>
+                    `);
+                    lucide.createIcons();
+                    return;
+                }
+
+                filteredReports.reverse().forEach(report => {
+                    const statusClass = report.status === 'verified' ? 'status-badge-verified' : 'status-badge-pending';
+                    const statusText = report.status === 'verified' ? 'ตรวจสอบแล้ว' : 'ยังไม่ตรวจสอบ';
+                    const statusIcon = report.status === 'verified' ? 'check-circle' : 'clock';
+
+                    $('#reportList').append(`
+                        <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-800 transition card-hover">
+                            <div class="flex flex-col md:flex-row justify-between gap-3">
+                                <div class="flex-1">
+                                    <div class="flex items-start gap-3 mb-2">
+                                        <span class="${statusClass} px-3 py-1 rounded-full text-xs font-semibold">
+                                            <i data-lucide="${statusIcon}" class="w-3 h-3 inline"></i> ${statusText}
+                                        </span>
+                                    </div>
+                                    <h3 class="font-bold text-lg text-gray-800 mb-1">${report.reporterName} (${report.reporterPosition})</h3>
+                                    <p class="text-sm text-gray-600 mb-2">
+                                        <i data-lucide="calendar" class="w-4 h-4 inline"></i> ${report.date}
+                                        <i data-lucide="clock" class="w-4 h-4 inline ml-2"></i> ${report.time}
+                                    </p>
+                                    <p class="text-sm text-gray-600 mb-2">
+                                        <i data-lucide="map-pin" class="w-4 h-4 inline"></i> ${report.area}
+                                    </p>
+                                    <p class="text-gray-700">${report.detail}</p>
+                                    ${report.adminNote ? `<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-500 rounded"><p class="text-sm text-blue-800"><strong>หมายเหตุผู้ตรวจการ:</strong> ${report.adminNote}</p></div>` : ''}
+                                </div>
+                                ${report.images.length > 0 ? `
+                                    <div class="flex gap-2 flex-wrap">
+                                        ${report.images.map(img => `
+                                            <img src="${img}" class="image-preview rounded-lg border-2 border-gray-300 hover:border-purple-800" onclick="openImageModal('${img}')">
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `);
+                });
+
+                lucide.createIcons();
+            }
+
+            // กรองรายการ
+            $('#filterAll').click(function() {
+                loadReportList('all');
+                $(this).addClass('bg-purple-800 text-white').removeClass('bg-gray-200 text-gray-700');
+                $('#filterPending, #filterVerified').removeClass('bg-purple-800 text-white').addClass('bg-gray-200 text-gray-700');
+            });
+
+            $('#filterPending').click(function() {
+                loadReportList('pending');
+                $(this).addClass('bg-purple-800 text-white').removeClass('bg-gray-200 text-gray-700');
+                $('#filterAll, #filterVerified').removeClass('bg-purple-800 text-white').addClass('bg-gray-200 text-gray-700');
+            });
+
+            $('#filterVerified').click(function() {
+                loadReportList('verified');
+                $(this).addClass('bg-purple-800 text-white').removeClass('bg-gray-200 text-gray-700');
+                $('#filterAll, #filterPending').removeClass('bg-purple-800 text-white').addClass('bg-gray-200 text-gray-700');
+            });
+
+            // Admin Login
+            $('#adminLoginForm').submit(function(e) {
+                e.preventDefault();
+
+                const username = $('#adminUsername').val();
+                const password = $('#adminPassword').val();
+
+                if (username === 'admin' && password === 'admin') {
+                    isAdminLoggedIn = true;
+                    $('#loginForm').hide();
+                    $('#adminDashboard').show();
+                    loadAdminTable();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'เข้าสู่ระบบสำเร็จ',
+                        text: 'ยินดีต้อนรับสู่ระบบผู้ตรวจการ',
+                        confirmButtonColor: '#5b21b6',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ข้อมูลไม่ถูกต้อง',
+                        text: 'กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่านอีกครั้ง',
+                        confirmButtonColor: '#5b21b6'
+                    });
+                }
+            });
+
+            // Logout
+            $('#logoutBtn').click(function() {
+                Swal.fire({
+                    icon: 'question',
+                    title: 'ยืนยันการออกจากระบบ',
+                    text: 'คุณต้องการออกจากระบบหรือไม่?',
+                    showCancelButton: true,
+                    confirmButtonColor: '#5b21b6',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'ออกจากระบบ',
+                    cancelButtonText: 'ยกเลิก'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        isAdminLoggedIn = false;
+                        $('#adminDashboard').hide();
+                        $('#loginForm').show();
+                        $('#adminLoginForm')[0].reset();
+                    }
+                });
+            });
+
+            // โหลดตารางสำหรับ Admin
+            function loadAdminTable() {
+                $('#adminTableBody').html('');
+                $('#adminCardList').html('');
+
+                if (reports.length === 0) {
+                    $('#adminTableBody').html(`
+                        <tr>
+                            <td colspan="7" class="text-center py-8 text-gray-500">
+                                <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-3 opacity-50"></i>
+                                <p>ยังไม่มีรายการเหตุการณ์</p>
+                            </td>
+                        </tr>
+                    `);
+                    $('#adminCardList').html(`
+                        <div class="text-center py-8 text-gray-500">
+                            <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-3 opacity-50"></i>
+                            <p>ยังไม่มีรายการเหตุการณ์</p>
+                        </div>
+                    `);
+                    lucide.createIcons();
+                    return;
+                }
+
+                reports.slice().reverse().forEach((report, index) => {
+                    const statusClass = report.status === 'verified' ? 'status-badge-verified' : 'status-badge-pending';
+                    const statusText = report.status === 'verified' ? 'ตรวจสอบแล้ว' : 'ยังไม่ตรวจสอบ';
+                    const statusIcon = report.status === 'verified' ? 'check-circle' : 'clock';
+
+                    // Desktop Table
+                    $('#adminTableBody').append(`
+                        <tr class="border-b hover:bg-purple-50 transition">
+                            <td class="px-4 py-3 text-sm">${report.date}<br>${report.time}</td>
+                            <td class="px-4 py-3 text-sm">${report.reporterName}<br><span class="text-gray-600">${report.reporterPosition}</span></td>
+                            <td class="px-4 py-3 text-sm">${report.area}</td>
+                            <td class="px-4 py-3 text-sm max-w-xs truncate">${report.detail}</td>
+                            <td class="px-4 py-3">
+                                ${report.images.length > 0 ? `
+                                    <div class="flex gap-1">
+                                        ${report.images.slice(0, 3).map(img => `
+                                            <img src="${img}" class="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-75" onclick="openImageModal('${img}')">
+                                        `).join('')}
+                                        ${report.images.length > 3 ? `<span class="text-xs text-gray-600">+${report.images.length - 3}</span>` : ''}
+                                    </div>
+                                ` : '<span class="text-gray-400 text-xs">ไม่มีรูป</span>'}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="${statusClass} px-2 py-1 rounded-full text-xs font-semibold inline-block">
+                                    <i data-lucide="${statusIcon}" class="w-3 h-3 inline"></i> ${statusText}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <button onclick="openVerifyModal(${report.id})" class="px-3 py-1 bg-purple-800 text-white rounded text-xs font-semibold hover:bg-gold-500 transition">
+                                    <i data-lucide="edit" class="w-3 h-3 inline"></i> ตรวจสอบ
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+
+                    // Mobile Cards
+                    $('#adminCardList').append(`
+                        <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-800 transition">
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="${statusClass} px-3 py-1 rounded-full text-xs font-semibold">
+                                    <i data-lucide="${statusIcon}" class="w-3 h-3 inline"></i> ${statusText}
+                                </span>
+                                <button onclick="openVerifyModal(${report.id})" class="px-3 py-1 bg-purple-800 text-white rounded text-xs font-semibold hover:bg-gold-500 transition">
+                                    <i data-lucide="edit" class="w-3 h-3 inline"></i> ตรวจสอบ
+                                </button>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2">${report.reporterName} (${report.reporterPosition})</h3>
+                            <p class="text-sm text-gray-600 mb-2">
+                                <i data-lucide="calendar" class="w-4 h-4 inline"></i> ${report.date}
+                                <i data-lucide="clock" class="w-4 h-4 inline ml-2"></i> ${report.time}
+                            </p>
+                            <p class="text-sm text-gray-600 mb-2">
+                                <i data-lucide="map-pin" class="w-4 h-4 inline"></i> ${report.area}
+                            </p>
+                            <p class="text-gray-700 mb-3">${report.detail}</p>
+                            ${report.images.length > 0 ? `
+                                <div class="flex gap-2 flex-wrap mb-3">
+                                    ${report.images.map(img => `
+                                        <img src="${img}" class="w-20 h-20 object-cover rounded border-2 border-gray-300 cursor-pointer hover:border-purple-800" onclick="openImageModal('${img}')">
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            ${report.adminNote ? `<div class="p-2 bg-blue-50 border-l-4 border-blue-500 rounded"><p class="text-sm text-blue-800"><strong>หมายเหตุ:</strong> ${report.adminNote}</p></div>` : ''}
+                        </div>
+                    `);
+                });
+
+                lucide.createIcons();
+            }
+
+            // เปิด Modal ตรวจสอบ
+            window.openVerifyModal = function(reportId) {
+                currentReportId = reportId;
+                const report = reports.find(r => r.id === reportId);
+
+                if (!report) return;
+
+                $('#verifyContent').html(`
+                    <div class="space-y-2 text-sm">
+                        <p><strong>ผู้รายงาน:</strong> ${report.reporterName} (${report.reporterPosition})</p>
+                        <p><strong>วันที่/เวลา:</strong> ${report.date} ${report.time}</p>
+                        <p><strong>พื้นที่:</strong> ${report.area}</p>
+                        <p><strong>รายละเอียด:</strong> ${report.detail}</p>
+                        ${report.images.length > 0 ? `
+                            <div>
+                                <strong>รูปภาพ:</strong>
+                                <div class="flex gap-2 flex-wrap mt-2">
+                                    ${report.images.map(img => `
+                                        <img src="${img}" class="w-24 h-24 object-cover rounded border-2 border-gray-300 cursor-pointer hover:border-purple-800" onclick="openImageModal('${img}')">
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `);
+
+                $('#adminNote').val(report.adminNote || '');
+                $('#verifyCheckbox').prop('checked', report.status === 'verified');
+
+                $('#verifyModal').addClass('active');
+                lucide.createIcons();
+            };
+
+            // บันทึกผลการตรวจสอบ
+            $('#saveVerification').click(function() {
+                const report = reports.find(r => r.id === currentReportId);
+
+                if (!report) return;
+
+                report.adminNote = $('#adminNote').val();
+                report.status = $('#verifyCheckbox').is(':checked') ? 'verified' : 'pending';
+
+                localStorage.setItem('securityReports', JSON.stringify(reports));
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกผลการตรวจสอบเรียบร้อย',
+                    text: 'ข้อมูลได้รับการอัปเดตเรียบร้อยแล้ว',
+                    confirmButtonColor: '#5b21b6',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+                $('#verifyModal').removeClass('active');
+                loadAdminTable();
+                loadReportList();
+            });
+
+            // ปิด Modal
+            $('#closeVerifyModal').click(function() {
+                $('#verifyModal').removeClass('active');
+            });
+
+            // เปิด/ปิด Image Modal
+            window.openImageModal = function(imageSrc) {
+                $('#modalImage').attr('src', imageSrc);
+                $('#imageModal').addClass('active');
+            };
+
+            $('#closeModal, #imageModal').click(function(e) {
+                if (e.target.id === 'closeModal' || e.target.id === 'imageModal') {
+                    $('#imageModal').removeClass('active');
+                }
+            });
+
+            // ดาวน์โหลด JSON
+            $('#downloadJSON').click(function() {
+                const dataStr = JSON.stringify(reports, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `security-reports-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ดาวน์โหลดสำเร็จ',
+                    text: 'ไฟล์ JSON ถูกดาวน์โหลดเรียบร้อยแล้ว',
+                    confirmButtonColor: '#5b21b6',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            });
+
+            // พิมพ์รายงาน
+            $('#printReport').click(function() {
+                window.print();
+            });
+
+            // โหลดรายการเมื่อเริ่มต้น
+            loadReportList();
+        });
+    </script>
+</body>
+</html>
