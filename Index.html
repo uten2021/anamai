@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบเช็คชื่อเข้าร่วมกิจกรรม - โรงเรียนบ้านเสยเสย</title>
+
+  <!-- Google Fonts - Kanit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'kanit': ['Kanit', 'sans-serif'],
+          },
+          colors: {
+            'primary': '#4A2C6D',
+            'teal': '#26A69A',
+            'lime': '#AED581',
+            'amber': '#FFCA28',
+            'orange': '#FF8A65',
+            'red': '#EF5350',
+            'dark-red': '#D32F2F',
+            'dark-orange': '#F57C00',
+            'yellow': '#FBC02D',
+            'blue': '#0288D1',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      font-family: 'Kanit', sans-serif;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4A2C6D;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .tab-btn {
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .tab-btn.active {
+      transform: translateY(0);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .card {
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+
+    .btn-action {
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      transform: scale(1.05);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-purple-800 via-indigo-700 to-purple-900 text-white shadow-lg">
+    <div class="w-full px-4 py-6">
+      <div class="text-center">
+        <h1 class="text-2xl md:text-3xl font-bold flex items-center justify-center gap-2">
+          📋 ระบบเช็คชื่อเข้าร่วมกิจกรรม
+        </h1>
+        <p class="text-purple-200 mt-2 text-lg">🏫 โรงเรียนบ้านเสยเสย</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="bg-white shadow-md sticky top-0 z-40">
+    <div class="w-full px-4">
+      <div class="flex flex-wrap gap-2 py-3 justify-center">
+        <button onclick="showTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg font-medium text-white bg-teal hover:bg-teal/90 flex items-center gap-2">
+          📊 แดชบอร์ด
+        </button>
+        <button onclick="showTab('personnel')" id="tab-personnel" class="tab-btn px-4 py-2 rounded-lg font-medium text-white bg-blue hover:bg-blue/90 flex items-center gap-2">
+          👥 จัดการบุคลากร
+        </button>
+        <button onclick="showTab('activities')" id="tab-activities" class="tab-btn px-4 py-2 rounded-lg font-medium text-white bg-lime hover:bg-lime/90 text-gray-800 flex items-center gap-2">
+          🎯 จัดการกิจกรรม
+        </button>
+        <button onclick="showTab('assignments')" id="tab-assignments" class="tab-btn px-4 py-2 rounded-lg font-medium text-white bg-amber hover:bg-amber/90 text-gray-800 flex items-center gap-2">
+          📝 มอบหมายกิจกรรม
+        </button>
+        <button onclick="showTab('checkin')" id="tab-checkin" class="tab-btn px-4 py-2 rounded-lg font-medium text-white bg-orange hover:bg-orange/90 flex items-center gap-2">
+          ✅ เช็คชื่อ
+        </button>
+        <button onclick="showTab('summary')" id="tab-summary" class="tab-btn px-4 py-2 rounded-lg font-medium text-white bg-primary hover:bg-primary/90 flex items-center gap-2">
+          📈 สรุปผล
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="flex-grow w-full px-4 py-6">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+      <div class="bg-white rounded-xl p-8 flex flex-col items-center gap-4">
+        <div class="spinner w-12 h-12 border-4"></div>
+        <p class="text-gray-600 font-medium">กำลังโหลด...</p>
+      </div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="content-dashboard" class="tab-content fade-in">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card bg-gradient-to-br from-teal to-teal/80 text-white rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-teal-100 text-sm">บุคลากรทั้งหมด</p>
+              <p id="stat-personnel" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <span class="text-4xl">👥</span>
+          </div>
+        </div>
+        <div class="card bg-gradient-to-br from-blue to-blue/80 text-white rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-blue-100 text-sm">กิจกรรมทั้งหมด</p>
+              <p id="stat-activities" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <span class="text-4xl">🎯</span>
+          </div>
+        </div>
+        <div class="card bg-gradient-to-br from-lime to-lime/80 text-gray-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-600 text-sm">บันทึกแล้ว</p>
+              <p id="stat-recorded" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <span class="text-4xl">✅</span>
+          </div>
+        </div>
+        <div class="card bg-gradient-to-br from-orange to-orange/80 text-white rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-orange-100 text-sm">ยังไม่บันทึก</p>
+              <p id="stat-not-recorded" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <span class="text-4xl">⏳</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          📊 กราฟสรุปการเข้าร่วมกิจกรรม
+        </h3>
+        <div class="h-80">
+          <canvas id="attendanceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Activity Table -->
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          📋 ตารางข้อมูลการบันทึกกิจกรรม
+        </h3>
+        <div class="table-container">
+          <table class="w-full min-w-[600px]">
+            <thead>
+              <tr class="bg-gradient-to-r from-primary to-purple-700 text-white">
+                <th class="px-4 py-3 text-left rounded-tl-lg">ชื่อกิจกรรม</th>
+                <th class="px-4 py-3 text-center">บุคลากร (มอบหมาย)</th>
+                <th class="px-4 py-3 text-center">เข้าร่วม</th>
+                <th class="px-4 py-3 text-center">ไม่เข้าร่วม</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-table-body">
+              <tr>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">📭</span>
+                    <p>ไม่มีข้อมูล</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Personnel Tab -->
+    <div id="content-personnel" class="tab-content hidden fade-in">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            👥 จัดการบุคลากร
+          </h3>
+          <button onclick="showAddPersonnelModal()" class="btn-action bg-teal text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-teal/90">
+            ➕ เพิ่มบุคลากร
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="w-full min-w-[400px]">
+            <thead>
+              <tr class="bg-gradient-to-r from-blue to-blue/80 text-white">
+                <th class="px-4 py-3 text-left rounded-tl-lg">ลำดับ</th>
+                <th class="px-4 py-3 text-left">ชื่อ-นามสกุล</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="personnel-table-body">
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">📭</span>
+                    <p>ไม่มีข้อมูล</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activities Tab -->
+    <div id="content-activities" class="tab-content hidden fade-in">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            🎯 จัดการกิจกรรม
+          </h3>
+          <button onclick="showAddActivityModal()" class="btn-action bg-lime text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-lime/90">
+            ➕ เพิ่มกิจกรรม
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="w-full min-w-[400px]">
+            <thead>
+              <tr class="bg-gradient-to-r from-lime to-lime/80 text-gray-800">
+                <th class="px-4 py-3 text-left rounded-tl-lg">ลำดับ</th>
+                <th class="px-4 py-3 text-left">ชื่อกิจกรรม</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="activities-table-body">
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">📭</span>
+                    <p>ไม่มีข้อมูล</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignments Tab -->
+    <div id="content-assignments" class="tab-content hidden fade-in">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          📝 มอบหมายเข้าร่วมกิจกรรม
+        </h3>
+
+        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+          <div class="flex-grow">
+            <label class="block text-sm font-medium text-gray-700 mb-2">เลือกกิจกรรม</label>
+            <select id="assignment-activity-select" onchange="loadAssignments()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber focus:border-amber">
+              <option value="">-- เลือกกิจกรรม --</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button id="btn-add-assignment" onclick="showAddAssignmentModal()" class="btn-action bg-amber text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-amber/90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              ➕ เพิ่มรายชื่อ
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="w-full min-w-[400px]">
+            <thead>
+              <tr class="bg-gradient-to-r from-amber to-amber/80 text-gray-800">
+                <th class="px-4 py-3 text-left rounded-tl-lg">ลำดับ</th>
+                <th class="px-4 py-3 text-left">ชื่อ-นามสกุล</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-table-body">
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">👆</span>
+                    <p>กรุณาเลือกกิจกรรม</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Check-in Tab -->
+    <div id="content-checkin" class="tab-content hidden fade-in">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          ✅ เช็คชื่อเข้าร่วมกิจกรรม
+        </h3>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">เลือกกิจกรรม</label>
+          <select id="checkin-activity-select" onchange="loadCheckinData()" class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange focus:border-orange">
+            <option value="">-- เลือกกิจกรรม --</option>
+          </select>
+        </div>
+
+        <!-- Status Badge -->
+        <div id="checkin-status-badge" class="hidden mb-4">
+          <span id="checkin-status-text" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+        </div>
+
+        <!-- Stats Cards -->
+        <div id="checkin-stats" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="card bg-gradient-to-br from-blue to-blue/80 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-blue-100 text-sm">บุคลากรทั้งหมด</p>
+                <p id="checkin-total" class="text-2xl font-bold mt-1">0</p>
+              </div>
+              <span class="text-3xl">👥</span>
+            </div>
+          </div>
+          <div class="card bg-gradient-to-br from-teal to-teal/80 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-teal-100 text-sm">เข้าร่วม</p>
+                <p id="checkin-attended" class="text-2xl font-bold mt-1">0</p>
+              </div>
+              <span class="text-3xl">✅</span>
+            </div>
+          </div>
+          <div class="card bg-gradient-to-br from-red to-red/80 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-red-100 text-sm">ไม่เข้าร่วม</p>
+                <p id="checkin-not-attended" class="text-2xl font-bold mt-1">0</p>
+              </div>
+              <span class="text-3xl">❌</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="w-full min-w-[400px]">
+            <thead>
+              <tr class="bg-gradient-to-r from-orange to-orange/80 text-white">
+                <th class="px-4 py-3 text-left rounded-tl-lg">ลำดับ</th>
+                <th class="px-4 py-3 text-left">ชื่อ-นามสกุล</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="checkin-table-body">
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">👆</span>
+                    <p>กรุณาเลือกกิจกรรม</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="checkin-save-btn" class="hidden mt-6 text-center">
+          <button onclick="saveCheckin()" class="btn-action bg-teal text-white px-8 py-3 rounded-lg font-medium text-lg flex items-center gap-2 mx-auto hover:bg-teal/90">
+            💾 บันทึกข้อมูล
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Tab -->
+    <div id="content-summary" class="tab-content hidden fade-in">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          📈 สรุปการเข้าร่วมกิจกรรม
+        </h3>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">เลือกกิจกรรม</label>
+          <select id="summary-activity-select" onchange="loadSummaryData()" class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+            <option value="">-- เลือกกิจกรรม --</option>
+          </select>
+        </div>
+
+        <!-- Stats Cards -->
+        <div id="summary-stats" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="card bg-gradient-to-br from-blue to-blue/80 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-blue-100 text-sm">บุคลากรทั้งหมด</p>
+                <p id="summary-total" class="text-2xl font-bold mt-1">0</p>
+              </div>
+              <span class="text-3xl">👥</span>
+            </div>
+          </div>
+          <div class="card bg-gradient-to-br from-teal to-teal/80 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-teal-100 text-sm">เข้าร่วม</p>
+                <p id="summary-attended" class="text-2xl font-bold mt-1">0</p>
+              </div>
+              <span class="text-3xl">✅</span>
+            </div>
+          </div>
+          <div class="card bg-gradient-to-br from-red to-red/80 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-red-100 text-sm">ไม่เข้าร่วม</p>
+                <p id="summary-not-attended" class="text-2xl font-bold mt-1">0</p>
+              </div>
+              <span class="text-3xl">❌</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="w-full min-w-[400px]">
+            <thead>
+              <tr class="bg-gradient-to-r from-primary to-purple-700 text-white">
+                <th class="px-4 py-3 text-left rounded-tl-lg">ลำดับ</th>
+                <th class="px-4 py-3 text-left">ชื่อ-นามสกุล</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="summary-table-body">
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">👆</span>
+                    <p>กรุณาเลือกกิจกรรม</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 text-white mt-auto">
+    <div class="w-full px-4 py-6">
+      <div class="text-center">
+        <p class="font-medium flex items-center justify-center gap-2">
+          📋 ระบบเช็คชื่อเข้าร่วมกิจกรรม
+        </p>
+        <p class="text-gray-300 mt-1">🏫 โรงเรียนบ้านเสยเสย</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Personnel Modal -->
+  <div id="personnel-modal" class="hidden fixed inset-0 z-50">
+    <div class="modal-overlay absolute inset-0" onclick="closePersonnelModal()"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative z-10 fade-in">
+        <h3 id="personnel-modal-title" class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          👤 เพิ่มบุคลากร
+        </h3>
+        <input type="hidden" id="personnel-edit-id">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อ-นามสกุล</label>
+          <input type="text" id="personnel-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue focus:border-blue" placeholder="กรอกชื่อ-นามสกุล">
+        </div>
+        <div class="flex gap-3 justify-end">
+          <button onclick="closePersonnelModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            ยกเลิก
+          </button>
+          <button onclick="savePersonnel()" class="btn-action px-4 py-2 bg-blue text-white rounded-lg hover:bg-blue/90">
+            💾 บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Modal -->
+  <div id="activity-modal" class="hidden fixed inset-0 z-50">
+    <div class="modal-overlay absolute inset-0" onclick="closeActivityModal()"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative z-10 fade-in">
+        <h3 id="activity-modal-title" class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          🎯 เพิ่มกิจกรรม
+        </h3>
+        <input type="hidden" id="activity-edit-id">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อกิจกรรม</label>
+          <input type="text" id="activity-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime focus:border-lime" placeholder="กรอกชื่อกิจกรรม">
+        </div>
+        <div class="flex gap-3 justify-end">
+          <button onclick="closeActivityModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            ยกเลิก
+          </button>
+          <button onclick="saveActivity()" class="btn-action px-4 py-2 bg-lime text-gray-800 rounded-lg hover:bg-lime/90">
+            💾 บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assignment Modal -->
+  <div id="assignment-modal" class="hidden fixed inset-0 z-50">
+    <div class="modal-overlay absolute inset-0" onclick="closeAssignmentModal()"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative z-10 fade-in">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          📝 เพิ่มรายชื่อบุคลากร
+        </h3>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">เลือกบุคลากร (เลือกได้หลายคน)</label>
+          <div id="assignment-personnel-list" class="border border-gray-300 rounded-lg max-h-60 overflow-y-auto p-2">
+            <!-- Personnel checkboxes will be loaded here -->
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end">
+          <button onclick="closeAssignmentModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            ยกเลิก
+          </button>
+          <button onclick="saveAssignments()" class="btn-action px-4 py-2 bg-amber text-gray-800 rounded-lg hover:bg-amber/90">
+            💾 บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global Variables
+    let personnelData = [];
+    let activitiesData = [];
+    let attendanceChart = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeApp();
+    });
+
+    function initializeApp() {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function() {
+          loadDashboard();
+        })
+        .withFailureHandler(handleError)
+        .initializeSheets();
+    }
+
+    // Loading Functions
+    function showLoading() {
+      document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
+    function handleError(error) {
+      hideLoading();
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: error.message || 'กรุณาลองใหม่อีกครั้ง',
+        confirmButtonColor: '#4A2C6D'
+      });
+    }
+
+    // Tab Navigation
+    function showTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+
+      // Remove active class from all buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'ring-2', 'ring-offset-2');
+      });
+
+      // Show selected tab
+      document.getElementById('content-' + tabName).classList.remove('hidden');
+      document.getElementById('tab-' + tabName).classList.add('active', 'ring-2', 'ring-offset-2');
+
+      // Load data for the tab
+      switch(tabName) {
+        case 'dashboard':
+          loadDashboard();
+          break;
+        case 'personnel':
+          loadPersonnel();
+          break;
+        case 'activities':
+          loadActivities();
+          break;
+        case 'assignments':
+          loadActivityDropdown('assignment-activity-select');
+          break;
+        case 'checkin':
+          loadActivityDropdown('checkin-activity-select');
+          break;
+        case 'summary':
+          loadActivityDropdown('summary-activity-select');
+          break;
+      }
+    }
+
+    // ==================== Dashboard ====================
+
+    function loadDashboard() {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+
+          // Update stats
+          document.getElementById('stat-personnel').textContent = data.totalPersonnel;
+          document.getElementById('stat-activities').textContent = data.totalActivities;
+          document.getElementById('stat-recorded').textContent = data.recordedActivities;
+          document.getElementById('stat-not-recorded').textContent = data.notRecordedActivities;
+
+          // Update chart
+          updateChart(data.activityStats);
+
+          // Update table
+          updateDashboardTable(data.activityStats);
+        })
+        .withFailureHandler(handleError)
+        .getDashboardData();
+    }
+
+    function updateChart(activityStats) {
+      const ctx = document.getElementById('attendanceChart').getContext('2d');
+
+      if (attendanceChart) {
+        attendanceChart.destroy();
+      }
+
+      const labels = activityStats.map(a => a.name);
+      const attendedData = activityStats.map(a => a.attended);
+      const notAttendedData = activityStats.map(a => a.notAttended);
+
+      attendanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'เข้าร่วม',
+              data: attendedData,
+              backgroundColor: '#26A69A',
+              borderColor: '#26A69A',
+              borderWidth: 1
+            },
+            {
+              label: 'ไม่เข้าร่วม',
+              data: notAttendedData,
+              backgroundColor: '#EF5350',
+              borderColor: '#EF5350',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                font: {
+                  family: 'Kanit'
+                }
+              }
+            },
+            datalabels: {
+              color: '#fff',
+              font: {
+                family: 'Kanit',
+                weight: 'bold',
+                size: 12
+              },
+              formatter: function(value) {
+                return value > 0 ? value : '';
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: {
+                font: {
+                  family: 'Kanit'
+                }
+              }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: {
+                font: {
+                  family: 'Kanit'
+                },
+                stepSize: 1
+              }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function updateDashboardTable(activityStats) {
+      const tbody = document.getElementById('dashboard-table-body');
+
+      if (activityStats.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>ไม่มีข้อมูล</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = activityStats.map((activity, index) => `
+        <tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors">
+          <td class="px-4 py-3">${activity.name}</td>
+          <td class="px-4 py-3 text-center">
+            <span class="bg-blue/10 text-blue px-2 py-1 rounded-full text-sm font-medium">${activity.totalAssigned}</span>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <span class="bg-teal/10 text-teal px-2 py-1 rounded-full text-sm font-medium">${activity.attended}</span>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <span class="bg-red/10 text-red px-2 py-1 rounded-full text-sm font-medium">${activity.notAttended}</span>
+          </td>
+          <td class="px-4 py-3 text-center">
+            ${activity.status === 'บันทึกแล้ว'
+              ? '<span class="bg-teal/10 text-teal px-3 py-1 rounded-full text-sm font-medium">✅ บันทึกแล้ว</span>'
+              : '<span class="bg-orange/10 text-dark-orange px-3 py-1 rounded-full text-sm font-medium">⏳ ยังไม่บันทึก</span>'
+            }
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ==================== Personnel ====================
+
+    function loadPersonnel() {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+          personnelData = data;
+          updatePersonnelTable(data);
+        })
+        .withFailureHandler(handleError)
+        .getPersonnel();
+    }
+
+    function updatePersonnelTable(personnel) {
+      const tbody = document.getElementById('personnel-table-body');
+
+      if (personnel.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>ไม่มีข้อมูล</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = personnel.map((p, index) => `
+        <tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors">
+          <td class="px-4 py-3">${index + 1}</td>
+          <td class="px-4 py-3">${p.name}</td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="showEditPersonnelModal('${p.id}', '${p.name}')" class="btn-action bg-amber text-gray-800 px-3 py-1 rounded-lg text-sm mr-2 hover:bg-amber/90">
+              ✏️ แก้ไข
+            </button>
+            <button onclick="confirmDeletePersonnel('${p.id}', '${p.name}')" class="btn-action bg-red text-white px-3 py-1 rounded-lg text-sm hover:bg-red/90">
+              🗑️ ลบ
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function showAddPersonnelModal() {
+      document.getElementById('personnel-modal-title').innerHTML = '👤 เพิ่มบุคลากร';
+      document.getElementById('personnel-edit-id').value = '';
+      document.getElementById('personnel-name-input').value = '';
+      document.getElementById('personnel-modal').classList.remove('hidden');
+    }
+
+    function showEditPersonnelModal(id, name) {
+      document.getElementById('personnel-modal-title').innerHTML = '✏️ แก้ไขบุคลากร';
+      document.getElementById('personnel-edit-id').value = id;
+      document.getElementById('personnel-name-input').value = name;
+      document.getElementById('personnel-modal').classList.remove('hidden');
+    }
+
+    function closePersonnelModal() {
+      document.getElementById('personnel-modal').classList.add('hidden');
+    }
+
+    function savePersonnel() {
+      const id = document.getElementById('personnel-edit-id').value;
+      const name = document.getElementById('personnel-name-input').value.trim();
+
+      if (!name) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูล',
+          text: 'กรุณากรอกชื่อ-นามสกุล',
+          confirmButtonColor: '#4A2C6D'
+        });
+        return;
+      }
+
+      showLoading();
+      closePersonnelModal();
+
+      if (id) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideLoading();
+            if (result.success) {
+              Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: result.message,
+                confirmButtonColor: '#26A69A',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              loadPersonnel();
+            } else {
+              handleError({ message: result.message });
+            }
+          })
+          .withFailureHandler(handleError)
+          .updatePersonnel(id, name);
+      } else {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideLoading();
+            if (result.success) {
+              Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: result.message,
+                confirmButtonColor: '#26A69A',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              loadPersonnel();
+            } else {
+              handleError({ message: result.message });
+            }
+          })
+          .withFailureHandler(handleError)
+          .addPersonnel(name);
+      }
+    }
+
+    function confirmDeletePersonnel(id, name) {
+      Swal.fire({
+        title: 'ยืนยันการลบ?',
+        html: `คุณต้องการลบ <strong>${name}</strong> ใช่หรือไม่?<br><small class="text-red-500">ข้อมูลการมอบหมายและเช็คชื่อที่เกี่ยวข้องจะถูกลบด้วย</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#D32F2F',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '🗑️ ลบ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          showLoading();
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideLoading();
+              if (result.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'ลบสำเร็จ',
+                  text: result.message,
+                  confirmButtonColor: '#26A69A',
+                  timer: 1500,
+                  showConfirmButton: false
+                });
+                loadPersonnel();
+              } else {
+                handleError({ message: result.message });
+              }
+            })
+            .withFailureHandler(handleError)
+            .deletePersonnel(id);
+        }
+      });
+    }
+
+    // ==================== Activities ====================
+
+    function loadActivities() {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+          activitiesData = data;
+          updateActivitiesTable(data);
+        })
+        .withFailureHandler(handleError)
+        .getActivities();
+    }
+
+    function updateActivitiesTable(activities) {
+      const tbody = document.getElementById('activities-table-body');
+
+      if (activities.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>ไม่มีข้อมูล</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = activities.map((a, index) => `
+        <tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors">
+          <td class="px-4 py-3">${index + 1}</td>
+          <td class="px-4 py-3">${a.name}</td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="showEditActivityModal('${a.id}', '${a.name}')" class="btn-action bg-amber text-gray-800 px-3 py-1 rounded-lg text-sm mr-2 hover:bg-amber/90">
+              ✏️ แก้ไข
+            </button>
+            <button onclick="confirmDeleteActivity('${a.id}', '${a.name}')" class="btn-action bg-red text-white px-3 py-1 rounded-lg text-sm hover:bg-red/90">
+              🗑️ ลบ
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function showAddActivityModal() {
+      document.getElementById('activity-modal-title').innerHTML = '🎯 เพิ่มกิจกรรม';
+      document.getElementById('activity-edit-id').value = '';
+      document.getElementById('activity-name-input').value = '';
+      document.getElementById('activity-modal').classList.remove('hidden');
+    }
+
+    function showEditActivityModal(id, name) {
+      document.getElementById('activity-modal-title').innerHTML = '✏️ แก้ไขกิจกรรม';
+      document.getElementById('activity-edit-id').value = id;
+      document.getElementById('activity-name-input').value = name;
+      document.getElementById('activity-modal').classList.remove('hidden');
+    }
+
+    function closeActivityModal() {
+      document.getElementById('activity-modal').classList.add('hidden');
+    }
+
+    function saveActivity() {
+      const id = document.getElementById('activity-edit-id').value;
+      const name = document.getElementById('activity-name-input').value.trim();
+
+      if (!name) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูล',
+          text: 'กรุณากรอกชื่อกิจกรรม',
+          confirmButtonColor: '#4A2C6D'
+        });
+        return;
+      }
+
+      showLoading();
+      closeActivityModal();
+
+      if (id) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideLoading();
+            if (result.success) {
+              Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: result.message,
+                confirmButtonColor: '#26A69A',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              loadActivities();
+            } else {
+              handleError({ message: result.message });
+            }
+          })
+          .withFailureHandler(handleError)
+          .updateActivity(id, name);
+      } else {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideLoading();
+            if (result.success) {
+              Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: result.message,
+                confirmButtonColor: '#26A69A',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              loadActivities();
+            } else {
+              handleError({ message: result.message });
+            }
+          })
+          .withFailureHandler(handleError)
+          .addActivity(name);
+      }
+    }
+
+    function confirmDeleteActivity(id, name) {
+      Swal.fire({
+        title: 'ยืนยันการลบ?',
+        html: `คุณต้องการลบกิจกรรม <strong>${name}</strong> ใช่หรือไม่?<br><small class="text-red-500">ข้อมูลการมอบหมายและเช็คชื่อที่เกี่ยวข้องจะถูกลบด้วย</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#D32F2F',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '🗑️ ลบ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          showLoading();
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideLoading();
+              if (result.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'ลบสำเร็จ',
+                  text: result.message,
+                  confirmButtonColor: '#26A69A',
+                  timer: 1500,
+                  showConfirmButton: false
+                });
+                loadActivities();
+              } else {
+                handleError({ message: result.message });
+              }
+            })
+            .withFailureHandler(handleError)
+            .deleteActivity(id);
+        }
+      });
+    }
+
+    // ==================== Assignments ====================
+
+    function loadActivityDropdown(selectId) {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+          activitiesData = data;
+          const select = document.getElementById(selectId);
+          select.innerHTML = '<option value="">-- เลือกกิจกรรม --</option>' +
+            data.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        })
+        .withFailureHandler(handleError)
+        .getActivities();
+    }
+
+    function loadAssignments() {
+      const activityId = document.getElementById('assignment-activity-select').value;
+      const addBtn = document.getElementById('btn-add-assignment');
+
+      if (!activityId) {
+        addBtn.disabled = true;
+        document.getElementById('assignments-table-body').innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">👆</span>
+                <p>กรุณาเลือกกิจกรรม</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      addBtn.disabled = false;
+      showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+          updateAssignmentsTable(data);
+        })
+        .withFailureHandler(handleError)
+        .getAssignmentsByActivity(activityId);
+    }
+
+    function updateAssignmentsTable(assignments) {
+      const tbody = document.getElementById('assignments-table-body');
+
+      if (assignments.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>ยังไม่มีบุคลากรที่ได้รับมอบหมาย</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = assignments.map((a, index) => `
+        <tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors">
+          <td class="px-4 py-3">${index + 1}</td>
+          <td class="px-4 py-3">${a.personnelName}</td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="confirmDeleteAssignment('${a.id}', '${a.personnelName}')" class="btn-action bg-red text-white px-3 py-1 rounded-lg text-sm hover:bg-red/90">
+              🗑️ ลบ
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function showAddAssignmentModal() {
+      const activityId = document.getElementById('assignment-activity-select').value;
+
+      if (!activityId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเลือกกิจกรรม',
+          text: 'กรุณาเลือกกิจกรรมก่อนเพิ่มรายชื่อ',
+          confirmButtonColor: '#4A2C6D'
+        });
+        return;
+      }
+
+      showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(unassignedPersonnel) {
+          hideLoading();
+
+          const container = document.getElementById('assignment-personnel-list');
+
+          if (unassignedPersonnel.length === 0) {
+            container.innerHTML = `
+              <div class="text-center text-gray-500 py-4">
+                <span class="text-2xl">✅</span>
+                <p class="mt-2">บุคลากรทั้งหมดได้รับมอบหมายแล้ว</p>
+              </div>
+            `;
+          } else {
+            container.innerHTML = unassignedPersonnel.map(p => `
+              <label class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                <input type="checkbox" value="${p.id}" class="assignment-checkbox w-5 h-5 text-amber rounded focus:ring-amber">
+                <span>${p.name}</span>
+              </label>
+            `).join('');
+          }
+
+          document.getElementById('assignment-modal').classList.remove('hidden');
+        })
+        .withFailureHandler(handleError)
+        .getUnassignedPersonnel(activityId);
+    }
+
+    function closeAssignmentModal() {
+      document.getElementById('assignment-modal').classList.add('hidden');
+    }
+
+    function saveAssignments() {
+      const activityId = document.getElementById('assignment-activity-select').value;
+      const checkboxes = document.querySelectorAll('.assignment-checkbox:checked');
+      const personnelIds = Array.from(checkboxes).map(cb => cb.value);
+
+      if (personnelIds.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเลือกบุคลากร',
+          text: 'กรุณาเลือกบุคลากรอย่างน้อย 1 คน',
+          confirmButtonColor: '#4A2C6D'
+        });
+        return;
+      }
+
+      showLoading();
+      closeAssignmentModal();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideLoading();
+          if (result.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'สำเร็จ',
+              text: result.message,
+              confirmButtonColor: '#26A69A',
+              timer: 1500,
+              showConfirmButton: false
+            });
+            loadAssignments();
+          } else {
+            handleError({ message: result.message });
+          }
+        })
+        .withFailureHandler(handleError)
+        .addAssignments(activityId, personnelIds);
+    }
+
+    function confirmDeleteAssignment(id, name) {
+      Swal.fire({
+        title: 'ยืนยันการลบ?',
+        html: `คุณต้องการลบ <strong>${name}</strong> ออกจากกิจกรรมนี้ใช่หรือไม่?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#D32F2F',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '🗑️ ลบ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          showLoading();
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideLoading();
+              if (result.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'ลบสำเร็จ',
+                  text: result.message,
+                  confirmButtonColor: '#26A69A',
+                  timer: 1500,
+                  showConfirmButton: false
+                });
+                loadAssignments();
+              } else {
+                handleError({ message: result.message });
+              }
+            })
+            .withFailureHandler(handleError)
+            .deleteAssignment(id);
+        }
+      });
+    }
+
+    // ==================== Check-in ====================
+
+    let checkinData = [];
+
+    function loadCheckinData() {
+      const activityId = document.getElementById('checkin-activity-select').value;
+
+      if (!activityId) {
+        document.getElementById('checkin-stats').classList.add('hidden');
+        document.getElementById('checkin-save-btn').classList.add('hidden');
+        document.getElementById('checkin-status-badge').classList.add('hidden');
+        document.getElementById('checkin-table-body').innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">👆</span>
+                <p>กรุณาเลือกกิจกรรม</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+          checkinData = data.details;
+
+          // Update status badge
+          const statusBadge = document.getElementById('checkin-status-badge');
+          const statusText = document.getElementById('checkin-status-text');
+          statusBadge.classList.remove('hidden');
+
+          if (data.isRecorded) {
+            statusText.className = 'px-3 py-1 rounded-full text-sm font-medium bg-teal/10 text-teal';
+            statusText.innerHTML = '✅ บันทึกแล้ว';
+          } else {
+            statusText.className = 'px-3 py-1 rounded-full text-sm font-medium bg-orange/10 text-dark-orange';
+            statusText.innerHTML = '⏳ ยังไม่บันทึก';
+          }
+
+          // Update stats
+          document.getElementById('checkin-stats').classList.remove('hidden');
+          document.getElementById('checkin-total').textContent = data.total;
+          document.getElementById('checkin-attended').textContent = data.attended;
+          document.getElementById('checkin-not-attended').textContent = data.notAttended;
+
+          // Update table
+          updateCheckinTable(data.details);
+
+          // Show save button
+          if (data.details.length > 0) {
+            document.getElementById('checkin-save-btn').classList.remove('hidden');
+          } else {
+            document.getElementById('checkin-save-btn').classList.add('hidden');
+          }
+        })
+        .withFailureHandler(handleError)
+        .getAttendanceData(activityId);
+    }
+
+    function updateCheckinTable(details) {
+      const tbody = document.getElementById('checkin-table-body');
+
+      if (details.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>ยังไม่มีบุคลากรที่ได้รับมอบหมาย</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = details.map((d, index) => `
+        <tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors">
+          <td class="px-4 py-3">${index + 1}</td>
+          <td class="px-4 py-3">${d.personnelName}</td>
+          <td class="px-4 py-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <label class="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="status-${d.personnelId}" value="เข้าร่วม"
+                  ${d.status === 'เข้าร่วม' ? 'checked' : ''}
+                  onchange="updateCheckinStatus('${d.personnelId}', 'เข้าร่วม')"
+                  class="w-4 h-4 text-teal focus:ring-teal">
+                <span class="text-teal font-medium">✅ เข้าร่วม</span>
+              </label>
+              <label class="flex items-center gap-1 cursor-pointer ml-4">
+                <input type="radio" name="status-${d.personnelId}" value="ไม่เข้าร่วม"
+                  ${d.status === 'ไม่เข้าร่วม' ? 'checked' : ''}
+                  onchange="updateCheckinStatus('${d.personnelId}', 'ไม่เข้าร่วม')"
+                  class="w-4 h-4 text-red focus:ring-red">
+                <span class="text-red font-medium">❌ ไม่เข้าร่วม</span>
+              </label>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateCheckinStatus(personnelId, status) {
+      const item = checkinData.find(d => d.personnelId === personnelId);
+      if (item) {
+        item.status = status;
+      }
+
+      // Update counts
+      let attended = 0;
+      let notAttended = 0;
+      checkinData.forEach(d => {
+        if (d.status === 'เข้าร่วม') attended++;
+        else if (d.status === 'ไม่เข้าร่วม') notAttended++;
+      });
+
+      document.getElementById('checkin-attended').textContent = attended;
+      document.getElementById('checkin-not-attended').textContent = notAttended;
+    }
+
+    function saveCheckin() {
+      const activityId = document.getElementById('checkin-activity-select').value;
+
+      if (!activityId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเลือกกิจกรรม',
+          text: 'กรุณาเลือกกิจกรรมก่อนบันทึก',
+          confirmButtonColor: '#4A2C6D'
+        });
+        return;
+      }
+
+      const attendanceData = checkinData.map(d => ({
+        personnelId: d.personnelId,
+        status: d.status
+      }));
+
+      showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideLoading();
+          if (result.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'บันทึกสำเร็จ',
+              text: result.message,
+              confirmButtonColor: '#26A69A',
+              timer: 1500,
+              showConfirmButton: false
+            });
+            loadCheckinData();
+          } else {
+            handleError({ message: result.message });
+          }
+        })
+        .withFailureHandler(handleError)
+        .saveAttendance(activityId, attendanceData);
+    }
+
+    // ==================== Summary ====================
+
+    function loadSummaryData() {
+      const activityId = document.getElementById('summary-activity-select').value;
+
+      if (!activityId) {
+        document.getElementById('summary-stats').classList.add('hidden');
+        document.getElementById('summary-table-body').innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">👆</span>
+                <p>กรุณาเลือกกิจกรรม</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          hideLoading();
+
+          // Update stats
+          document.getElementById('summary-stats').classList.remove('hidden');
+          document.getElementById('summary-total').textContent = data.total;
+          document.getElementById('summary-attended').textContent = data.attended;
+          document.getElementById('summary-not-attended').textContent = data.notAttended;
+
+          // Update table
+          updateSummaryTable(data.details);
+        })
+        .withFailureHandler(handleError)
+        .getActivitySummary(activityId);
+    }
+
+    function updateSummaryTable(details) {
+      const tbody = document.getElementById('summary-table-body');
+
+      if (details.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>ยังไม่มีข้อมูล</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = details.map((d, index) => {
+        let statusBadge = '';
+        if (d.status === 'เข้าร่วม') {
+          statusBadge = '<span class="bg-teal/10 text-teal px-3 py-1 rounded-full text-sm font-medium">✅ เข้าร่วม</span>';
+        } else if (d.status === 'ไม่เข้าร่วม') {
+          statusBadge = '<span class="bg-red/10 text-red px-3 py-1 rounded-full text-sm font-medium">❌ ไม่เข้าร่วม</span>';
+        } else {
+          statusBadge = '<span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-sm font-medium">⏳ ยังไม่บันทึก</span>';
+        }
+
+        return `
+          <tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors">
+            <td class="px-4 py-3">${index + 1}</td>
+            <td class="px-4 py-3">${d.personnelName}</td>
+            <td class="px-4 py-3 text-center">${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
